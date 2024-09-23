@@ -105,6 +105,20 @@ f = open("output.txt", "w")
 f.write(record.decode())
 
 # writes the record in JSON format
-f.write(record.decode('json'))
+f.write(record.json())
+
+```
+
+### Helper Functions
+
+```Python
+
+# True if primary record, otherwise False
+record.primary()
+
+# True if record is primary record with at least one continuation record to follow, otherwise False
+record.hasCont()
+
+#NOTE: both of these functions will return False if the record object has not been initialised with ARINC-424 data
 
 ```
