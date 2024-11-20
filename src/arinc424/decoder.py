@@ -1,4 +1,5 @@
 from collections import defaultdict
+import io
 import string
 
 
@@ -146,7 +147,7 @@ def field_007(value, record):
     d['S'] = 'FMS SID Enroute Transition'
     d['R'] = 'RNP SID Runway Transition'
     d['N'] = 'RNP SID or SID Common Route'
-    d['P'] = 'RNP SID Enroute Transition'    
+    d['P'] = 'RNP SID Enroute Transition'
     d['T'] = 'Vector SID Runway Transition'
     d['V'] = 'Vector SID Enroute Transition'
   elif record.ident == 'PE' or record.ident == 'HE':
@@ -253,34 +254,79 @@ def field_016(value, record):
 
 
 # 5.17 Waypoint Description Code (DESC CODE)
-def field_017(value, record):
-  s = ''
+def field_017(value: str, record):
+  s = io.StringIO()
   match value[0]:
     case 'A':
-      s += ('Airport as Fix')
+      s.write('Airport as Waypoint\n')
     case 'E':
-      s += ('Essential Waypoint')
+      s.write('Essential Waypoint\n')
     case 'F':
-      s += ('Off Airway Floating Waypoint')
+      s.write('Off Airway Waypoint\n')
     case 'G':
-      s += ('Runway/Helipad as Fix')
+      s.write('Runway/Helipad as Waypoint\n')
     case 'H':
-      s += ('Heliport as Waypoint')
+      s.write('Heliport as Waypoint\n')
     case 'N':
-      s += ('NDB Navaid as Waypoint')
+      s.write('NDB Navaid as Waypoint\n')
     case 'P':
-      s += ('Phantom Waypoint')
+      s.write('Phantom Waypoint\n')
     case 'R':
-      s += ('Non-Essential Waypoint')
+      s.write('Non-Essential Waypoint\n')
     case 'T':
-      s += ('Transition Essential Waypoint')
+      s.write('Transition Essential Waypoint\n')
     case 'V':
-      s += ('VHF Navaid As Fix')
-    case _:
-      pass
-  # TODO: finish this
+      s.write('VHF Navaid as Waypoint\n')
 
-  return s
+  match value[1]:
+    case 'B':
+      s.write('Flyover Waypoint: End of SID/STAR Route Type, APCH Transition or Final Approach\n')
+    case 'E':
+      s.write('End of Enroute Airway or Terminal Procedure Route Type\n')
+    case 'U':
+      s.write('Uncharted Airway Intersection\n')
+    case 'Y':
+      s.write('Fly-Over Waypoint\n')
+
+  match value[2]:
+    case 'A':
+      s.write('Unnamed Stepdown Fix After Final Approach Fix\n')
+    case 'B':
+      s.write('Unnamed Stepdown Fix Before Final Approach Fix\n')
+    case 'C':
+      s.write('ATC Compulsory Waypoint\n')
+    case 'G':
+      s.write('Oceanic Gateway Waypoint\n')
+    case 'M':
+      s.write('First Leg of Missed Approach Procedure\n')
+    case 'P':
+      s.write('Path Point Fix\n')
+    case 'R':
+      s.write('Fix used for turning final approach\n')
+    case 'S':
+      s.write('Named Stepdown Fix\n')
+
+  match value[3]:
+    case 'A':
+      s.write('Initial Approach Fix\n')
+    case 'B':
+      s.write('Intermediate Approach Fix\n')
+    case 'C':
+      s.write('Initial Approach Fix with Holding\n')
+    case 'D':
+      s.write('Initial Approach Fix with Final Approach Course Fix\n')
+    case 'E':
+      s.write('Final End Point Fix\n')
+    case 'F':
+      s.write('Published Final Approach Fix or Database Final Approach Fix\n')
+    case 'H':
+      s.write('Holding Fix\n')
+    case 'I':
+      s.write('Final Approach Course Fix\n')
+    case 'M':
+      s.write('Published Missed Approach Point Fix\n')
+
+  return s.getvalue().strip()
 
 
 # 5.18 Boundary Code (BDY CODE)
@@ -307,12 +353,40 @@ def field_020(value, record):
 
 
 # 5.21 Path and Termination (PATH TERM)
-def field_021(value, record):
+LegTypeDesc = defaultdict(def_val)
+LegTypeDesc['IF'] = 'Initial Fix or IF Leg.'
+LegTypeDesc['TF'] = 'Track to a Fix or TF Leg.'
+LegTypeDesc['CF'] = 'Course to a Fix or CF Leg.'
+LegTypeDesc['DF'] = 'Direct to a Fix or DF Leg.'
+LegTypeDesc['FA'] = 'Fix to an Altitude or FA Leg.'
+LegTypeDesc['FC'] = 'Track from a Fix for a Distance or FC Leg.'
+LegTypeDesc['FD'] = 'Track from a Fix to a DME Distance or FD Leg.'
+LegTypeDesc['FM'] = 'From a Fix to a Manual termination or FM Leg.'
+LegTypeDesc['CA'] = 'Course to an Altitude or CA Leg.'
+LegTypeDesc['CD'] = 'Course to a DME Distance or CD Leg.'
+LegTypeDesc['CI'] = 'Course to an Intercept or CI Leg.'
+LegTypeDesc['CR'] = 'Course to a Radial termination or CR Leg.'
+LegTypeDesc['RF'] = 'Constant Radius Arc or RF Leg.'
+LegTypeDesc['AF'] = 'Arc to a Fix or AF Leg.'
+LegTypeDesc['VA'] = 'Heading to an Altitude termination or VA Leg.'
+LegTypeDesc['VD'] = 'Heading to a DME Distance termination or VD Leg.'
+LegTypeDesc['VI'] = 'Heading to an Intercept or VI Leg.'
+LegTypeDesc['VM'] = 'Heading to a Manual termination or VM Leg.'
+LegTypeDesc['VR'] = 'Heading to a Radial termination or VR Leg.'
+LegTypeDesc['PI'] = '045/180 Procedure Turn or PI Leg.'
+LegTypeDesc['HA'] = 'Holding pattern (Altitude Termination)'
+LegTypeDesc['HF'] = 'Holding pattern (Single circuit terminating at the fix)'
+LegTypeDesc['HM'] = 'Holding pattern (Manual Termination)'
+
+def field_021(value: str, record):
   value = value.strip()
-  if len(value) > 0:
-    if value.isalpha() is False:
-      raise ValueError("Invalid Path and Termination:", value)
-  return value
+  if len(value) == 0:
+    return value
+
+  if not value.isalpha():
+    raise ValueError("Invalid Path and Termination:", value)
+
+  return LegTypeDesc[value]
 
 
 # 5.22 Turn Direction Valid (TDV)
