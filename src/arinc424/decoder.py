@@ -1,6 +1,7 @@
 from collections import defaultdict
 import io
 import string
+import re
 
 
 class Field():
@@ -204,8 +205,10 @@ def field_008(value, record):
 
 # 5.9 SID/STAR Route Identifier (SID/STAR IDENT)
 def field_009(value, record):
-  if value.strip().isalnum():
-    return value
+  if re.match(r'^[A-Z0-9\-]+$', value.strip()): # alnum with dashes
+      return value
+  else:
+    raise ValueError("SID/STAR Route Identifier must be alphanumeric with optional dashes", value)
 
 
 # 5.10 Approach Route Identifier (APPROACH IDENT)
