@@ -552,7 +552,7 @@ def field_038(value, record):
 
 # 5.39 Magnetic Variation (MAG VAR, D MAG VAR)
 def field_039(value, record):
-  return value if value.strip() == '' else "{:03} {}".format(int(value[1:]), value[0])
+  return value if value.strip() == '' else "{:.1f} {}".format((float(value[1:])/10), value[0])
 
 
 # 5.40 DME Elevation (DME ELEV)
@@ -698,7 +698,7 @@ def field_054(value, record):
 
 # 5.55 Airport/Heliport Elevation (ELEV)
 def field_055(value, record):
-  return value
+  return value.lstrip('0') + " ft" if value.isnumeric() else value
 
 
 # 5.56 Gate Identifier (GATE IDENT)
